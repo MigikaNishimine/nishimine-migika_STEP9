@@ -15,19 +15,26 @@
             <h2 class="m-0">Cytech EC</h2>
 
             <div class="d-flex align-items-center gap-3">
+
+            @guest
+                <a href="{{ route('login') }}">Login</a>
+                @if (Route::has('register'))
+                    <a href="{{ route('register') }}">Register</a>
+                @endif
+            @endguest
+
+            @auth
                 <a href="{{ route('products.index') }}">Home</a>
                 <a href="{{ route('mypage.index') }}">マイページ</a>
+                <span>ログインユーザー: {{ Auth::user()->name }}</span>
+                <form action="{{ route('logout') }}" method="POST">
+                    @csrf
+                    <button class="btn btn-danger btn-sm">ログアウト</button>
+                </form>
+            @endauth
 
-                @auth
-                    <span>ログインユーザー: {{ Auth::user()->name }}</span>
-
-                    <form action="{{ route('logout') }}" method="POST">
-                        @csrf
-                        <button class="btn btn-danger btn-sm">ログアウト</button>
-                    </form>
-                @endauth
             </div>
-        </div>
+        </div>        
     </header>
 
 

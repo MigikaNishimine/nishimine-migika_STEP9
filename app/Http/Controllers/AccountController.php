@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 class AccountController extends Controller
@@ -35,7 +35,7 @@ class AccountController extends Controller
             $data['password'] = Hash::make($request->password);
         }
 
-        DB::table('users')->where('id', $user->id)->update($data);
+        $user->update($data);
 
         return redirect()->route('mypage.index')->with('success', 'アカウント情報を更新しました');
     }

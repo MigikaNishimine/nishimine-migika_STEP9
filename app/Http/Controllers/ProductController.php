@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\Product;
+use App\Models\Company;
+use App\Models\Like;
 
 class ProductController extends Controller
 {
@@ -13,73 +15,72 @@ class ProductController extends Controller
     {
         $this->middleware('auth');
     }
+
     public function index(Request $request)
     {
-        $query = DB::table('products')
-        ->join('companies', 'products.company_id', '=', 'companies.id')
-        ->select('products.*', 'companies.company_name');
+        $query = Product::with('company');
 
         if ($request->filled('product_name')) {
-            $query->where('products.product_name', 'like', '%' . $request->input('product_name') . '%');
+            $query->where('product_name', 'like', '%' . $request->product_name . '%');
         }
 
         if ($request->filled('company_id')) {
-            $query->where('products.company_id', $request->input('company_id'));
+            $query->where('company_id', $request->company_id);
         }
 
         if ($request->filled('price_min')) {
-            $query->where('products.price', '>=', $request->input('price_min'));
+            $query->where('price', '>=', $request->price_min);
         }
 
         if ($request->filled('price_max')) {
-            $query->where('products.price', '<=', $request->input('price_max'));
+            $query->where('price', '<=', $request->price_max);
         }
 
         if ($request->filled('comment')) {
-            $query->where('products.comment', 'like', '%' . $request->input('comment') . '%');
+            $query->where('comment', 'like', '%' . $request->comment . '%');
         }
 
         if ($request->filled('img_path')) {
-            $query->where('products.img_path', 'like', '%' . $request->input('img_path') . '%');
+            $query->where('img_path', 'like', '%' . $request->img_path . '%');
         }
 
         if ($request->filled('created_at')) {
-            $query->where('products.created_at', 'like', '%' . $request->input('created_at') . '%');
+            $query->whereDate('created_at', $request->created_at);
         }
 
         if ($request->filled('updated_at')) {
-            $query->where('products.updated_at', 'like', '%' . $request->input('updated_at') . '%');
+            $query->whereDate('updated_at', $request->updated_at);
         }
 
         $products = $query->paginate(10);
-        $companies = DB::table('companies')->get();
+        $companies = Company::all();
+
         return view('products.index', compact('products', 'companies'));
     }
+
+    
     public function show($id)
     {
-        $product = DB::table('products')
-        ->join('companies', 'products.company_id', '=', 'companies.id')
-        ->select('products.*', 'companies.company_name')
-        ->where('products.id', $id)
-        ->first();
-        $isLiked = DB::table('likes')
-        ->where('user_id', Auth::id())
-        ->where('product_id', $id)
-        ->exists();
+        $product = Product::with('company')->findOrFail($id);
+
+        $isLiked = Like::where('user_id', Auth::id())
+            ->where('product_id', $id)
+            ->exists();
 
         return view('products.show', compact('product', 'isLiked'));
 
     }
+
+
     public function edit($id)
     {
-        $product = DB::table('products')
-            ->join('companies','products.company_id','=','companies.id')
-            ->select('products.*','companies.company_name')
-            ->where('products.id',$id)
-            ->first();
-        $companies = DB::table('companies')->get();
-        return view('products.edit',compact('product','companies'));
+        $product = Product::findOrFail($id);
+        $companies = Company::all();
+
+        return view('products.edit', compact('product', 'companies'));
     }
+
+
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -89,61 +90,65 @@ class ProductController extends Controller
             'comment' => 'nullable',
             'img_path' => 'nullable|image'
         ]);
-        
-        if ($request->hasFile('img_path')){
-            $path = $request->file('img_path')->store('products','public');
+
+        $product = Product::findOrFail($id);
+
+        if ($request->hasFile('img_path')) {
+            $path = $request->file('img_path')->store('products', 'public');
         } else {
-            $path = DB::table('products')->where('id',$id)->value('img_path');
+            $path = $product->img_path;
         }
-        
-        DB::table('products')->where('id',$id)->update([
+
+        $product->update([
             'product_name' => $request->product_name,
             'price' => $request->price,
             'company_id' => $request->company_id,
             'comment' => $request->comment,
             'img_path' => $path,
-            'updated_at' => now(),
+            
         ]);
-        return redirect()->route('products.show', $id)->with('success','更新しました');
+
+        return redirect()->route('products.show', $id)->with('success', '更新しました');
     }
+
+
     public function destroy($id)
     {
-        DB::table('products')->where('id', $id)->delete();
-        return redirect()->route('products.index')->with('success','削除しました');
+        Product::destroy($id);
+        return redirect()->route('products.index')->with('success', '削除しました');
     }
+
+    
     public function create()
     {
-        $companies = DB::table('companies')->get();
-        return view('products.create',compact('companies'));
+        $companies = Company::all();
+        return view('products.create', compact('companies'));
     }
+
+    
     public function store(Request $request)
-{
-    $request->validate([
-        'product_name' => 'required',
-        'price' => 'required|numeric',
-        'company_id' => 'required',
-        'comment' => 'nullable',
-        'img_path' => 'nullable|image'
-    ]);
+    {
+        $request->validate([
+            'product_name' => 'required',
+            'price' => 'required|numeric',
+            'company_id' => 'required',
+            'comment' => 'nullable',
+            'img_path' => 'nullable|image'
+        ]);
 
-    if ($request->hasFile('img_path')) {
-        $path = $request->file('img_path')->store('products', 'public');
-    } else {
-        $path = null;
-    }
+        $path = $request->hasFile('img_path')
+            ? $request->file('img_path')->store('products', 'public')
+            : null;
 
-    DB::table('products')->insert([
-        'product_name' => $request->product_name,
-        'price' => $request->price,
-        'company_id' => $request->company_id,
-        'comment' => $request->comment,
-        'img_path' => $path,
-        'user_id' => Auth::id(), 
-        'created_at' => now(),
-        'updated_at' => now(),
-    ]);
+        Product::create([
+            'product_name' => $request->product_name,
+            'price' => $request->price,
+            'company_id' => $request->company_id,
+            'comment' => $request->comment,
+            'img_path' => $path,
+            'user_id' => Auth::id(),
+        ]);
 
         return redirect()->route('products.index')->with('success', '登録しました');
-}
-
+    }
 }

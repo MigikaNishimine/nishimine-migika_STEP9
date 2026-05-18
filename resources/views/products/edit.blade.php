@@ -11,10 +11,10 @@
     <p>価格：<input type="number" name="price" value="{{ $product->price }}"></p>
     <p>会社名：
         <select name="company_id">
-            @foreach ($compnies as $company)
+            @foreach ($companies as $company)
                 <option value="{{ $company->id }}" {{ $company->id == $product->company_id ? 'selected' : ''}}>
                     {{ $company->company_name }}
-                </opton>
+                </option>
             @endforeach
         </select>
     </p>

@@ -5,17 +5,28 @@
 <h1>商品詳細</h1>
 <p>商品名: {{ $product->product_name }}</p>
 <p>価格: {{ $product->price }}</p>
-<p>会社名: {{ $product->company_name }}</p>
+<p>会社名: {{ $product->company->company_name }}</p>
 <p>コメント: {{ $product->comment }}</p>
-<p>画像:<img src="{{ $product->img_path }}" alt="{{ $product->product_name }}"></p>
+
+<p>画像:
+    @if ($product->img_path)
+        <img src="{{ asset('storage/' . $product->img_path) }}" 
+             alt="{{ $product->product_name }}" 
+             width="200">
+    @else
+        <span class="text-muted">画像なし</span>
+    @endif
+</p>
+
 <p>登録日時: {{ $product->created_at }}</p>
 <p>更新日時: {{ $product->updated_at }}</p>
+
 <a href="{{ route('products.index') }}">一覧に戻る</a>
 <hr>
+
 <form action="{{ route('products.like', $product->id) }}" method="POST" style="display:inline-block;">
     @csrf
-    <button type="submit" class="btn 
-        {{ $isLiked ? 'btn-danger' : 'btn-outline-danger' }}">
+    <button type="submit" class="btn {{ $isLiked ? 'btn-danger' : 'btn-outline-danger' }}">
         ♥ お気に入り
     </button>
 </form>
@@ -31,6 +42,8 @@
         </button>
     </form>
 @endif
+
 <a href="{{ route('purchase.show', $product->id) }}" class="btn btn-success">購入する</a>
 <a href="{{ route('mypage.index') }}" class="btn btn-secondary">マイページへ戻る</a>
+
 @endsection
